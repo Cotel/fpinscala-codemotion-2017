@@ -16,39 +16,49 @@ class OrderSpec extends FunSpec with Matchers {
 
   // 1. Typeclass
   trait Order[A] {
-    def compare(other: A): Int
+    def compare(a1: A, a2: A): Int
 
-    def >(other: A): Boolean = compare(other) > 0
-    def ===(other: A): Boolean = compare(other) == 0
-    def <(other: A): Boolean = compare(other) < 0
+    def gt(a1: A, a2: A): Boolean = compare(a1, a2) > 0
+    def eq(a1: A, a2: A): Boolean = compare(a1, a2) == 0
+    def lt(a1: A, a2: A): Boolean = compare(a1, a2) < 0
+  }
+
+  object Order {
+    def apply[A](implicit O: Order[A]) = O
+
+    object syntax {
+      implicit class OrderOperations[A](self: A)(implicit O: Order[A]) {
+        def >(other: A) = O.gt(self, other)
+        def ===(other: A) = O.eq(self, other)
+        def <(other: A) = O.lt(self, other)
+      }
+    }
   }
 
   // 2. Generic function
-  def greatest[A](l: List[A])(wrap: A => Order[A]): Option[A] =
+  import Order.syntax._
+  def greatest[A: Order](l: List[A]): Option[A] =
     l.foldLeft(Option.empty[A]) {
-      case (Some(max), a) if wrap(a) < max => Option(max)
+      case (Some(max), a) if a < max => Option(max)
       case (_, a) => Option(a)
     }
 
-  def quicksort[A](l: List[A])(wrap: A => Order[A]): List[A] =
+  def quicksort[A: Order](l: List[A]): List[A] =
     l match {
       case h :: t =>
-        val (lower, greater) = t.partition(a => wrap(a) < h)
-        quicksort(lower)(wrap) ::: h :: quicksort(greater)(wrap)
+        val (lower, greater) = t.partition(_ < h)
+        quicksort(lower) ::: h :: quicksort(greater)
       case Nil => Nil
     }
 
-  def greatest2[A](l: List[A])(wrap: A => Order[A]): Option[A] =
-    quicksort(l)(wrap).reverse.headOption
+  def greatest2[A: Order](l: List[A]): Option[A] =
+    quicksort(l).reverse.headOption
 
   // 3. Typeclass instance
-  case class Person(name: String, age: Int) extends Order[Person] {
-    def compare(other: Person) = this.age - other.age
-  }
+  implicit val intOrd: Order[Int] = (a1: Int, a2: Int) => a1 - a2
 
-  case class IntOrder(unwrap: Int) extends Order[Int] {
-    def compare(other: Int) = unwrap - other
-  }
+  case class Person(name: String, age: Int)
+  implicit val personOrd: Order[Person] = (a1: Person, a2: Person) => intOrd.compare(a1.age, a2.age)
 
   // 4. Execution
   describe("greatest") {
@@ -57,18 +67,18 @@ class OrderSpec extends FunSpec with Matchers {
         greatest(Person("Félix", 5) ::
                  Person("Alberto", 3) ::
                  Person("Alfredo", 7) ::
-                 Person("Sergio", 2) :: Nil)(identity) shouldBe Option(Person("Alfredo", 7))
+                 Person("Sergio", 2) :: Nil) shouldBe Option(Person("Alfredo", 7))
       }
       it("should work for empty lists") {
-        greatest(List.empty[Person])(identity) shouldBe None
+        greatest(List.empty[Person]) shouldBe None
       }
     }
     describe("int") {
       it("should work for non-empty lists") {
-        greatest(5 :: 3 :: 7 :: 2 :: Nil)(IntOrder(_)) shouldBe Option(7)
+        greatest(5 :: 3 :: 7 :: 2 :: Nil) shouldBe Option(7)
       }
       it("should work for empty lists") {
-        greatest(List.empty[Int])(IntOrder(_)) shouldBe None
+        greatest(List.empty[Int]) shouldBe None
       }
     }
   }
@@ -80,22 +90,22 @@ class OrderSpec extends FunSpec with Matchers {
           Person("Félix", 5) ::
           Person("Alberto", 3) ::
           Person("Alfredo", 7) ::
-          Person("Sergio", 2) :: Nil)(identity) shouldBe
+          Person("Sergio", 2) :: Nil) shouldBe
             Person("Sergio", 2) ::
             Person("Alberto", 3) ::
             Person("Félix", 5) ::
             Person("Alfredo", 7) :: Nil
       }
       it("should work for empty lists") {
-        quicksort(List.empty[Person])(identity) shouldBe List.empty[Person]
+        quicksort(List.empty[Person]) shouldBe List.empty[Person]
       }
     }
     describe("int") {
       it("should work for non-empty lists") {
-        quicksort(5 :: 3 :: 7 :: 2 :: Nil)(IntOrder(_)) shouldBe 2 :: 3 :: 5 :: 7 :: Nil
+        quicksort(5 :: 3 :: 7 :: 2 :: Nil) shouldBe 2 :: 3 :: 5 :: 7 :: Nil
       }
       it("should work for empty lists") {
-        quicksort(List.empty[Int])(IntOrder(_)) shouldBe List.empty[Int]
+        quicksort(List.empty[Int]) shouldBe List.empty[Int]
       }
     }
   }
@@ -106,18 +116,18 @@ class OrderSpec extends FunSpec with Matchers {
         greatest2(Person("Félix", 5) ::
                  Person("Alberto", 3) ::
                  Person("Alfredo", 7) ::
-                 Person("Sergio", 2) :: Nil)(identity) shouldBe Option(Person("Alfredo", 7))
+                 Person("Sergio", 2) :: Nil) shouldBe Option(Person("Alfredo", 7))
       }
       it("should work for empty lists") {
-        greatest2(List.empty[Person])(identity) shouldBe None
+        greatest2(List.empty[Person]) shouldBe None
       }
     }
     describe("int") {
       it("should work for non-empty lists") {
-        greatest2(5 :: 3 :: 7 :: 2 :: Nil)(IntOrder(_)) shouldBe Option(7)
+        greatest2(5 :: 3 :: 7 :: 2 :: Nil) shouldBe Option(7)
       }
       it("should work for empty lists") {
-        greatest2(List.empty[Int])(IntOrder(_)) shouldBe None
+        greatest2(List.empty[Int]) shouldBe None
       }
     }
   }

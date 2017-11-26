@@ -27,7 +27,8 @@ class EqSpec extends FunSpec with Matchers {
 
   // 2.1. This function takes a list of elements of type `A` and a value of
   //      that type `A` and returns true if the list contains that value.
-  def contains[A](l: List[A])(a: A)(E: Eq[A]): Boolean = ???
+  def contains[A](l: List[A])(a: A)(E: Eq[A]): Boolean =
+    l.exists(E.eq(a, _))
 
   // 2.2. This function is similar to `contains` but instead of returning
   //      just true or false, it returns the position the value occupies in
@@ -35,32 +36,36 @@ class EqSpec extends FunSpec with Matchers {
   //      in the list
   //      > index(List(1, 2, 3, 4))(3) // Some(2)
   //      > index(List(1, 2, 3, 4))(7) // None
-  def index[A](l: List[A])(a: A)(E: Eq[A]): Option[Int] = ???
+  def index[A](l: List[A])(a: A)(E: Eq[A]): Option[Int] = {
+    val indexOfValue = l.indexWhere(E.eq(a, _))
+    if (indexOfValue == -1) Option.empty else Option(indexOfValue)
+  }
 
   // 3. Typeclass instances
 
   // 3.1. Give an instance for `Int`s
   //      > eq(5, 5) // true
   //      > eq(5, 7) // false
-  lazy val intEq: Eq[Int] = ???
+  lazy val intEq: Eq[Int] = (a1: Int, a2: Int) => a1 == a2
 
   // 3.2. Give an instance for `String`s
   //      > eq("hello", "hello") // true
   //      > eq("hello", "bye") // false
-  lazy val stringEq: Eq[String] = ???
+  lazy val stringEq: Eq[String] = (a1: String, a2: String) => a1 == a2
 
   // 3.3. Give an instance for `Person`s
   //      > eq(Person("Alberto", 28), Person("Alberto", 28)) // true
   //      > eq(Person("Alberto", 28), Person("Alberto", 29)) // false
   //      > eq(Person("Alberto", 28), Person("Albert",  28)) // false
   case class Person(name: String, age: Int)
-  def personEq(ES: Eq[String], EI: Eq[Int]): Eq[Person] = ???
+  def personEq(ES: Eq[String], EI: Eq[Int]): Eq[Person] = (a1: Person, a2: Person) =>
+    ES.eq(a1.name, a2.name) && EI.eq(a1.age, a2.age)
 
   // 4. Execution
   //
   //    To run the tests, replace `ignore` for `describe` and run them
   //    > testOnly package org.hablapps.typeclasses.exercise2.EqSpec
-  ignore("contains") {
+  describe("contains") {
     describe("int") {
       it("should work for non-empty list") {
         contains(List(1, 2, 3))(3)(intEq) shouldBe true
@@ -99,7 +104,7 @@ class EqSpec extends FunSpec with Matchers {
     }
   }
 
-  ignore("index") {
+  describe("index") {
     describe("int") {
       it("should work for non-empty list") {
         index(List(1, 2, 3))(3)(intEq) shouldBe Option(2)

@@ -26,32 +26,34 @@ class ShowSpec extends FunSpec with Matchers {
 
   // 2.1. This function takes a list of elements of type `A` and returns the
   //      third element in `String` format
-  def thirdString[A](l: List[A])(S: Show[A]): Option[String] = ???
+  def thirdString[A](l: List[A])(S: Show[A]): Option[String] =
+    l.drop(2).headOption.map(S.show)
 
   // 2.2. This function takes two `Int`s and prints the sum in the following format:
   //      > sum(5, 8) // "5 + 8 = 13"
-  def sum(i1: Int, i2: Int)(S: Show[Int]): String = ???
+  def sum(i1: Int, i2: Int)(S: Show[Int]): String = s"$i1 + $i2 = ${S.show(i1 + i2)}"
 
   // 3. Typeclass instances
 
   // 3.1. Give an instance for `Int`s
   //      > show(5) // "5"
-  lazy val intShow: Show[Int] = ???
+  lazy val intShow: Show[Int] = (a: Int) => a.toString
 
   // 3.2. Give an instance for `String`s
   //      > show("hello") // "hello"
-  lazy val stringShow: Show[String] = ???
+  lazy val stringShow: Show[String] = (a: String) => a
 
   // 3.3. Give an instance for `Person`s
   //      > show(Person("Alberto", 28)) // "Alberto - 28"
   case class Person(name: String, age: Int)
-  def personShow(SS: Show[String], IS: Show[Int]): Show[Person] = ???
+
+  def personShow(SS: Show[String], IS: Show[Int]): Show[Person] = (a: Person) => s"${a.name} - ${a.age}"
 
   // 4. Execution
   //
   //    To run the tests, replace `ignore` for `describe` and run them
   //    > testOnly package org.hablapps.typeclasses.exercise1.ShowSpec
-  ignore("thirdString") {
+  describe("thirdString") {
     describe("int") {
       it("should work for list with 3+ elements") {
         thirdString(List(1, 2, 3))(intShow) shouldBe Option("3")
@@ -86,7 +88,7 @@ class ShowSpec extends FunSpec with Matchers {
     }
   }
 
-  ignore("sum") {
+  describe("sum") {
     it("should work") {
       sum(5, 8)(intShow) shouldBe "5 + 8 = 13"
     }
